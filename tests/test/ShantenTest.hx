@@ -82,18 +82,18 @@ class ShantenTest {
 		var tiles = Tiles34.fromString({sou: '44467778', pin: '222567'});
 		Assert.areEqual(shanten.calculate_shanten(tiles), Shanten.AGARI_STATE);
 		
-		var melds = [setToString({sou: '777'})];
+		var melds = [setFromString({sou: '777'})];
 		Assert.areEqual(shanten.calculate_shanten(tiles, melds), 0);
 		
 		tiles = Tiles34.fromString({sou: '23455567', pin: '222', man: '345'});
 		var melds = [
-			setToString({man: '345'}),
-			setToString({sou: '555'}),
+			setFromString({man: '345'}),
+			setFromString({sou: '555'}),
 		];
 		Assert.areEqual(shanten.calculate_shanten(tiles, melds), 0);
 	}
 	
-	function setToString(data:StringTiles):Tiles34 {
+	function setFromString(data:StringTiles):Tiles34 {
 		var open_set = Tiles136.fromString(data).toArray();
 		for (i in 0...3) open_set[i] = Std.int(open_set[i] / 4);
 		return open_set;

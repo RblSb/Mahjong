@@ -5,26 +5,147 @@ import mahjong.Types;
 
 class Bot extends AbstractPlayer {
 	
+	var isOpenHand = false;
+	
 	public function new(game:Game, pos:Position) {
 		super(game, pos);
 	}
 	
 	override function onDiscardTile():Void {
-		if (game.checkWin(hand)) {
-			game.winDeal(this);
-			return;
-		}
 		sortHand(hand);
 		discardTile(selectTile());
 		sortHand(hand);
 		endTurn();
+		
+		if (isKanDiscard) {
+			game.openKandora();
+			isKanDiscard = false;
+		}
+		if (!isOpenHand) isOpenHand = isBuildOpenHand();
+	}
+	
+	override function onTsumo():Void {
+		game.winDeal(this);
+	}
+	
+	override function onClosedKan(type:Int):Void {
+		makeClosedKan(type);
+	}
+	
+	override function onRonAnswer():Void {
+		game.winDeal(this);
+	}
+	
+	override function onKanAnswer():Void {
+		if (!isOpenHand) {
+			game.endAnswer();
+			return;
+		}
+		var hand34 = countTiles(hand);
+		var melds34:Array<Tiles34> = [
+			for (meld in melds) [for (tile in meld) tile.type]
+		];
+		var currentShanten = game.getShanten(hand34, melds34);
+		var last = game.lastDiscardedTile().type;
+		
+		var hand34 = countTiles(hand);
+		var meld = [last, last, last, last];
+		for (i in 0...3) hand34.remove(last);
+		melds34.push(meld); //add temp meld and check shanten
+		if (currentShanten >= game.getShanten(hand34, melds34)) {
+			makeKan(meld);
+			return;
+		}
+		game.endAnswer();
+	}
+	
+	override function onPonAnswer():Void {
+		if (!isOpenHand) {
+			game.endAnswer();
+			return;
+		}
+		var hand34 = countTiles(hand);
+		var melds34:Array<Tiles34> = [
+			for (meld in melds) [for (tile in meld) tile.type]
+		];
+		var currentShanten = game.getShanten(hand34, melds34);
+		var last = game.lastDiscardedTile().type;
+		
+		var hand34 = countTiles(hand);
+		var meld = [last, last, last];
+		for (i in 0...2) hand34.remove(last);
+		melds34.push(meld); //add temp meld and check shanten
+		if (currentShanten >= game.getShanten(hand34, melds34)) {
+			makePon(meld);
+			return;
+		}
+		game.endAnswer();
+	}
+	
+	override function onChiAnswer(options:Array<Tiles34>):Void {
+		if (!isOpenHand) {
+			game.endAnswer();
+			return;
+		}
+		var hand34 = countTiles(hand);
+		var melds34:Array<Tiles34> = [
+			for (meld in melds) [for (tile in meld) tile.type]
+		];
+		var currentShanten = game.getShanten(hand34, melds34);
+		var last = game.lastDiscardedTile().type;
+		
+		for (meld in options) {
+			var hand34 = countTiles(hand);
+			//remove meld tiles from temp hand
+			for (type in meld) if (type != last) hand34.remove(type);
+			melds34.push(meld); //add temp meld and check shanten
+			if (currentShanten >= game.getShanten(hand34, melds34)) {
+				makeChi(meld);
+				return;
+			}
+			melds34.pop();
+		}
+		game.endAnswer();
+	}
+	
+	function isBuildOpenHand():Bool {
+		var handCounts = countTiles(hand);
+		for (i in 0...handCounts.length) {
+			var count = handCounts[i];
+			if (i < 9 * 3) {
+				if (count > 2) return true;
+			} else if (count > 1) {
+				//pair of dragons
+				if (i >= 9 * 3 + 4) return true;
+				//own wind or round wind
+				if (i == wind || i == game.roundWind) return true;
+			}
+		}
+		return false;
+	}
+	
+	inline function removeLockedTiles():Void {
+		var i = 0;
+		while(i < hand.length) {
+			var tile = hand[i];
+			if (tile.locked) hand.remove(tile);
+			else i++;
+		}
 	}
 	
 	function selectTile():Int {
+		var tempHand = hand.copy();
+		for (tile in tempHand) {
+			if (tile.locked) hand.remove(tile);
+		}
+		//removeLockedTiles();
+		if (hand.length == 0) {
+			trace("dead hand " + [for (tile in hand) tile.type]);
+			hand = tempHand; //TODO dead hand
+		}
+		
 		var visible = game.getVisibleTiles();
-		//trace(visible.toArray());
-		var handCounts:Array<Int> = [for (i in 0...34) 0];
-		for (tile in hand) handCounts[tile.type]++;
+		var handCounts = countTiles(hand);
 		
 		var id = deadTiles(visible);
 		if (id == -1) id = problemTiles(visible, handCounts);
@@ -39,7 +160,14 @@ class Bot extends AbstractPlayer {
 			trace(Tiles34.fromArray([for (tile in hand) tile.type]));
 			id = Std.random(hand.length);
 		}
-		return id;
+		
+		var type = hand[id].type;
+		hand = tempHand;
+		for (i in 0...hand.length) {
+			if (hand[i].type == type) return i;
+		}
+		trace("unknown id");
+		throw id;
 	}
 	
 	function handWithoutCombos(handCounts:Tiles34):Tiles34 {
@@ -54,12 +182,12 @@ class Bot extends AbstractPlayer {
 			if (handCounts[type] > 2) { //pon/kan
 				for (i in 0...handCounts[type]) tiles.push(hand.splice(id, 1)[0]);
 				handCounts[type] = 0;
-					
+				
 			} else if (handCounts[type] == 2 && !hasPair) { //TODO dora priority
 				for (i in 0...2) tiles.push(hand.splice(id, 1)[0]);
 				handCounts[type] = 0;
 				hasPair = true;
-					
+				
 			} else if (
 				id < 9 * 3 && id + 2 < hand.length &&
 			(handCounts[type+1] > 0 && handCounts[type+2] > 0 && isOneType(type, type + 2)) //chi
@@ -85,15 +213,11 @@ class Bot extends AbstractPlayer {
 		return false;
 	}
 	
-	inline function isOneType(type:Int, type2:Int) {
-		return Math.floor(type / 9) == Math.floor(type2 / 9);
-	}
-	
 	function deadTiles(visible:Tiles34):Int {
 		for (id in 0...hand.length) {
 			var type = hand[id].type;
 			if (visible[type] != 3) continue;
-			if (type >= 9 * 3) return id; //terminals
+			if (type >= 9 * 3) return id; //honors
 			//numbers
 			var number = type % 9 + 1;
 			if (number == 1) {
@@ -111,7 +235,7 @@ class Bot extends AbstractPlayer {
 		for (id in 0...hand.length) {
 			var type = hand[id].type;
 			if (handCounts[type] != 1 || visible[type] != 2) continue;
-			if (type >= 9 * 3) return id; //terminals
+			if (type >= 9 * 3) return id; //honors
 			//numbers
 			var number = type % 9 + 1;
 			if (number == 1) {
@@ -182,8 +306,7 @@ class Bot extends AbstractPlayer {
 	
 	function minorNumber(visible:Tiles34, handCounts:Tiles34):Int {
 		var tiles = handWithoutCombos(handCounts).toArray();
-		var tileCounts:Array<Int> = [for (i in 0...34) 0];
-		for (type in tiles) tileCounts[type]++;
+		var tileCounts:Array<Int> = countInts(tiles);
 		
 		if (tiles.length == 0) {
 			trace("only combos");

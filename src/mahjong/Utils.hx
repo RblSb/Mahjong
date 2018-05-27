@@ -1,9 +1,7 @@
 package mahjong;
 
-import mahjong.Constants.EAST;
-import mahjong.Constants.FIVE_RED_MAN;
-import mahjong.Constants.FIVE_RED_PIN;
-import mahjong.Constants.FIVE_RED_SOU;
+import mahjong.Constants.Wind;
+import mahjong.Constants.Akadora;
 import mahjong.Constants.HONOR_INDICES;
 import mahjong.Constants.TERMINAL_INDICES;
 import mahjong.Types.Tiles34;

@@ -1,34 +1,46 @@
 package mahjong;
 
-class Constants {
+@:enum abstract Terminal(Int) from Int to Int {
+	var Man1 = 0;
+	var Man9 = 8;
+	var Pin1 = 9;
+	var Pin9 = 17;
+	var Sou1 = 18;
+	var Sou9 = 26;
+}
+
+@:enum abstract Wind(Int) from Int to Int {
+	var East = 27;
+	var South = 28;
+	var West = 29;
+	var North = 30;
 	
-	//1 and 9
-	public static var TERMINAL_INDICES = [0, 8, 9, 17, 18, 26];
-	
-	//dragons and winds
-	public static inline var EAST = 27;
-	public static inline var SOUTH = 28;
-	public static inline var WEST = 29;
-	public static inline var NORTH = 30;
-	public static inline var HAKU = 31;
-	public static inline var HATSU = 32;
-	public static inline var CHUN = 33;
-	
-	public static var WINDS = [EAST, SOUTH, WEST, NORTH];
-	public static var HONOR_INDICES = [EAST, SOUTH, WEST, NORTH, HAKU, HATSU, CHUN];
-	
-	public static inline var FIVE_RED_MAN = 16;
-	public static inline var FIVE_RED_PIN = 52;
-	public static inline var FIVE_RED_SOU = 88;
-	
-	public static var AKA_DORA_LIST = [FIVE_RED_MAN, FIVE_RED_PIN, FIVE_RED_SOU];
-	
-	//@:enum abstract DISPLAY_WINDS(String) to String
-	public static var DISPLAY_WINDS = {
-		EAST: 'East',
-		SOUTH: 'South',
-		WEST: 'West',
-		NORTH: 'North'
+	public inline function toString() {
+		return switch(this) {
+			case East: "East";
+			case South: "South";
+			case West: "West";
+			case North: "North";
+			default: throw this;
+		}
 	}
-	
+}
+
+@:enum abstract Dragon(Int) from Int to Int {
+	var Chun = 33;
+	var Hatsu = 32;
+	var Haku = 31;
+}
+
+@:enum abstract Akadora(Int) from Int to Int {
+	var RedMan5 = 16;
+	var RedPin5 = 52;
+	var RedSou5 = 88;
+}
+
+class Constants {
+	public static var TERMINAL_INDICES = [Man1, Man9, Pin1, Pin9, Sou1, Sou9];
+	public static var WINDS = [East, South, West, North];
+	public static var HONOR_INDICES:Array<Int> = [East, South, West, North, Haku, Hatsu, Chun];
+	public static var AKA_DORA_LIST = [RedMan5, RedPin5, RedSou5];
 }
