@@ -22,11 +22,13 @@ class Game extends Screen {
 	var tiles:Array<Int>;
 	public var replayTiles:Array<Int>;
 	var deadWall:Array<Tile>;
-	var doraIndicator:Int;
 	public var roundWind:Wind;
 	var gameEnded:Bool;
 	var dealWinner:Position;
 	var turn:Position;
+	var buttons:Array<Button>;
+	var font = Assets.fonts.OpenSans_Regular;
+	var fontSize = 50;
 	
 	public function init(?customTiles:Array<Int>):Void {
 		shanten = new Shanten();
@@ -39,12 +41,13 @@ class Game extends Screen {
 		replayTiles = tiles.copy();
 		Tile.init();
 		
+		buttons = [];
 		players = [];
 		players.push(new Bot(this, RIGHT));
 		players.push(new Bot(this, TOP));
 		players.push(new Bot(this, LEFT));
-		//players.push(new Player(this, BOTTOM));
-		players.push(new Bot(this, BOTTOM));
+		players.push(new Player(this, BOTTOM));
+		//players.push(new Bot(this, BOTTOM));
 		
 		var id = tiles[0]%4;
 		players[id].wind = East;
@@ -64,8 +67,7 @@ class Game extends Screen {
 			if (row == 0) tile.rect.y = tile.rect.h / 10;
 			deadWall.push(tile);
 		}
-		deadWall[7 + 2].opened = true;
-		doraIndicator = deadWall[7 + 2].type;
+		deadWall[7 + 2].opened = true; //indicator 
 		roundWind = East;
 		dealWinner = null;
 		gameEnded = false;
@@ -82,7 +84,7 @@ class Game extends Screen {
 			#if kha_html5
 			var nav = js.Browser.window.location.hash.substr(1);
 			if (nav.length == 0) return;
-			nav = nav.substr(1, nav.length-2);
+			nav = nav.substr(1, nav.length - 2);
 			var arr = nav.split(",");
 			tiles = [];
 			for (s in arr) tiles.push(Std.parseInt(s));
@@ -198,7 +200,7 @@ class Game extends Screen {
 		for (player in players) {
 			if (player.position == nextPos) return player;
 		}
-		throw "not found player " + nextPos;
+		throw "not found next player " + nextPos;
 	}
 	
 	public inline function nextPosition(pos:Position):Position {
@@ -208,6 +210,13 @@ class Game extends Screen {
 			case TOP: LEFT;
 			case LEFT: BOTTOM;
 		}
+	}
+	
+	public function getPlayer(pos:Position):AbstractPlayer {
+		for (player in players) {
+			if (player.position == pos) return player;
+		}
+		throw "not found player " + pos;
 	}
 	
 	public inline function afterClosedKan(player:AbstractPlayer):Void {
@@ -256,13 +265,33 @@ class Game extends Screen {
 		gameEnded = true;
 	}
 	
+	public function clearButtons():Void {
+		buttons = [];
+	}
+	
+	public function addButton(name:String, func:Void->Void):Void {
+		var x = Screen.w/2;
+		if (buttons.length != 0) {
+			var last = buttons.length - 1;
+			x = buttons[last].rect.x + buttons[last].rect.w + 10;
+		}
+		buttons.push(new Button({
+			x: x,
+			y: Screen.h/2,
+			w: font.width(fontSize, name),
+			h: font.height(fontSize),
+			text: name,
+			onDown: func
+		}));
+	}
+	
 	override function onMouseMove(p:Pointer):Void {
-		if (turn != players[playerId].position) return;
+		if (Button.onMove(this, buttons, p)) return;
 		players[playerId].onMouseMove(p);
 	}
 	
 	override function onMouseDown(p:Pointer):Void {
-		if (turn != players[playerId].position) return;
+		if (Button.onDown(this, buttons, p)) return;
 		players[playerId].onMouseDown(p);
 	}
 	
@@ -301,22 +330,25 @@ class Game extends Screen {
 		var g = frame.g2;
 		g.begin(false);
 		g.imageScaleQuality = High;
-		g.font = Assets.fonts.OpenSans_Regular;
-		g.fontSize = 50;
+		g.font = font;
+		g.fontSize = fontSize;
 		table.render(g);
 		for (player in players) player.render(g);
 		drawDeadWall(g);
+		for (button in buttons) button.draw(g);
 		g.end();
 	}
 	
 	inline function drawDeadWall(g:Graphics) {
-		var scale = players[0].scale;
+		var scale = players[1].scale;
 		var lastTile = deadWall[deadWall.length-1];
 		var w = lastTile.rect.x + lastTile.rect.w;
 		var h = lastTile.rect.y + lastTile.rect.h;
 		var x = Screen.w/2 - w/2 * scale;
-		var offY = Screen.h - players[1].rect.h * scale - players[3].rect.h * players[3].scale;
-		var y = Screen.h/2 - offY/2;
+		//var offY = Screen.h - players[1].rect.h * scale - players[3].rect.h * players[3].scale;
+		//var y = Screen.h/2 - offY/2;
+		//var offY = Screen.h - players[1].rect.h * scale - players[3].rect.h * players[3].scale;
+		var y = Screen.h - players[3].rect.h * players[3].scale - lastTile.rect.h * 2 * scale;
 		g.transformation = Utils.matrix(
 			scale, 0, x,
 			0, scale, y
@@ -325,8 +357,12 @@ class Game extends Screen {
 		var left = "Left: " + tiles.length;
 		g.drawString(left, w, 0);
 		g.drawString("Turn: " + turn, w, g.font.height(g.fontSize));
-		if (dealWinner != null) g.drawString(dealWinner + " WIN!", w, g.font.height(g.fontSize)*2);
-		else if (gameEnded) g.drawString("DRAFT! R TO RESTART.", w, g.font.height(g.fontSize)*2);
+		if (gameEnded) {
+			var winner = dealWinner == null ? "DRAFT!" : dealWinner + " WIN!";
+			if (dealWinner == BOTTOM) winner = "YOU WIN!";
+			g.drawString(winner, w, g.font.height(g.fontSize)*2);
+			g.drawString("R TO RESTART.", w, g.font.height(g.fontSize)*3);
+		}
 		g.transformation = Utils.matrix();
 	}
 	

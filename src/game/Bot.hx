@@ -124,21 +124,11 @@ class Bot extends AbstractPlayer {
 		return false;
 	}
 	
-	inline function removeLockedTiles():Void {
-		var i = 0;
-		while(i < hand.length) {
-			var tile = hand[i];
-			if (tile.locked) hand.remove(tile);
-			else i++;
-		}
-	}
-	
 	function selectTile():Int {
 		var tempHand = hand.copy();
 		for (tile in tempHand) {
 			if (tile.locked) hand.remove(tile);
 		}
-		//removeLockedTiles();
 		if (hand.length == 0) {
 			trace("dead hand " + [for (tile in hand) tile.type]);
 			hand = tempHand; //TODO dead hand

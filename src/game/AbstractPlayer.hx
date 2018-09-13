@@ -110,9 +110,6 @@ class AbstractPlayer {
 			}
 		case DISCARD_TILE:
 			onDiscardTile();
-			for (tile in hand) {
-				if (tile.locked) tile.locked = false;
-			}
 		case RON_ANSWER:
 			if (isRon()) onRonAnswer();
 			else game.endAnswer();
@@ -171,10 +168,6 @@ class AbstractPlayer {
 		
 		if (isOneType(last, last + 2) && handCounts[last + 1] > 0 && handCounts[last + 2] > 0)
 			options.push([last, last + 1, last + 2]);
-		/*if (isOneType(last, last - 2) && handCounts[last - 1] > 0 && handCounts[last - 2] > 0)
-			options.push([last - 2, last - 1, last]);
-		if (isOneType(last - 1, last + 1) && handCounts[last - 1] > 0 && handCounts[last + 1] > 0)
-			options.push([last - 1, last, last + 1]);*/
 		if (isOneType(last, last - 2) && handCounts[last - 1] > 0 && handCounts[last - 2] > 0)
 			options.push([last, last - 2, last - 1]);
 		if (isOneType(last - 1, last + 1) && handCounts[last - 1] > 0 && handCounts[last + 1] > 0)
@@ -288,8 +281,9 @@ class AbstractPlayer {
 		var meld:Array<Tile> = [];
 		var len = meld34.toArray().length;
 		var startX = rect.w - Tile.w * (len - 1) - Tile.h;
-		if (position == game.currentTurn()) startX = rect.w - Tile.w * len;
-		var takenId = rotatedId(game.currentTurn());
+		var turn = game.currentTurn();
+		if (position == turn) startX = rect.w - Tile.w * len;
+		var takenId = rotatedId(turn);
 		if (takenId == 2 && len == 4) takenId++;
 		
 		for (i in 0...len) {
@@ -312,10 +306,15 @@ class AbstractPlayer {
 			meld.push(tile);
 		}
 		melds.push(meld);
+		sortHand(hand);
+		game.getPlayer(turn).forceRender = true;
 		forceRender = true;
 	}
 	
 	function endTurn():Void {
+		for (tile in hand) {
+			if (tile.locked) tile.locked = false;
+		}
 		forceRender = true;
 		state = WAIT;
 		game.endTurn();
@@ -377,7 +376,8 @@ class AbstractPlayer {
 			h: kha.Assets.images.tiles_Back.height * 5
 		}
 		scale = min / rect.w;
-		if (position != BOTTOM) scale *= 0.75;
+		if (position != BOTTOM) scale *= 0.80;
+		else scale *= 1.20;
 		
 		var fullW = (rect.w + rect.h*2) * scale;
 		if (fullW > min) {
